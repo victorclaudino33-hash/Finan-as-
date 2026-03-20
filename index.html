@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Financeiro</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;700&family=Montserrat:wght@300;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #010409; --card: rgba(13, 17, 23, 0.85); --border: rgba(56, 189, 248, 0.15);
+            --text: #f0f6fc; --dim: #8b949e; --accent: #58a6ff;
+            --success: #3fb950; --warning: #d29922; --danger: #f85149;
+            --font-nums: 'Bebas Neue', sans-serif;
+            --font-data: 'JetBrains Mono', monospace;
+            --font-main: 'Montserrat', sans-serif;
+        }
+
+        * { box-sizing: border-box; font-family: var(--font-main); transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        body { 
+            background: radial-gradient(at top right, #161b22, #010409); 
+            color: var(--text); margin: 0; min-height: 100vh; overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* --- TELA DE LOGIN --- */
+        #login-screen { 
+            position: fixed; inset: 0; background: var(--bg);
+            display: flex; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .login-card { 
+            background: var(--card); padding: 50px; border-radius: 40px; border: 1px solid var(--border);
+            text-align: center; width: 90%; max-width: 400px; backdrop-filter: blur(40px);
+            box-shadow: 0 0 80px rgba(0,0,0,0.9);
+        }
+        .login-card h1 { font-family: var(--font-nums); font-size: 3rem; letter-spacing: 3px; color: var(--accent); margin: 0; }
+        .login-input { 
+            background: rgba(0,0,0,0.6); border: 2px solid var(--border); padding: 18px; border-radius: 20px;
+            color: var(--accent); width: 100%; text-align: center; font-size: 2rem; font-family: var(--font-nums); 
+            letter-spacing: 12px; margin: 30px 0; outline: none;
+        }
+
+        /* --- LAYOUT PRINCIPAL --- */
+        #main-content { display: none; animation: fadeIn 0.8s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        header { padding: 30px 20px 10px; max-width: 1400px; margin: auto; }
+
+        /* --- CARROSSEL DE MESES (SMOOTH SNAP) --- */
+        .timeline-container {
+            position: relative; display: flex; align-items: center;
+            background: rgba(255,255,255,0.03); border-radius: 30px; 
+            padding: 8px; margin-bottom: 30px; border: 1px solid var(--border);
+        }
+        .timeline {
+            display: flex; gap: 12px; overflow-x: auto; scroll-behavior: smooth;
+            scroll-snap-type: x mandatory; padding: 10px 0; scrollbar-width: none;
+            -webkit-overflow-scrolling: touch; width: 100%;
+        }
+        .timeline::-webkit-scrollbar { display: none; }
+        .month-pill {
+            flex: 0 0 auto; scroll-snap-align: center; background: var(--card);
+            padding: 15px 35px; border-radius: 22px; border: 1px solid var(--border);
+            cursor: pointer; font-weight: 800; font-size: 0.8rem; color: var(--dim);
+            text-transform: uppercase; letter-spacing: 1px; min-width: 140px; text-align: center;
+        }
+        .month-pill.active {
+            background: var(--accent); color: #000; border-color: var(--accent);
+            box-shadow: 0 0 25px rgba(88, 166, 255, 0.4); transform: scale(1.05);
+        }
+        .nav-btn { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0 10px; }
+
+        /* --- DASHBOARD --- */
+        .stats-grid { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 20px; padding: 0 20px 40px; max-width: 1400px; margin: auto;
+        }
+        .stat-card { 
+            background: var(--card); padding: 30px; border-radius: 35px; border: 1px solid var(--border);
+            backdrop-filter: blur(10px); position: relative;
+        }
+        .stat-card h3 { font-size: 0.65rem; color: var(--dim); text-transform: uppercase; letter-spacing: 2px; margin: 0 0 10px; }
+        .number { font-family: var(--font-nums); font-size: 3.5rem; margin: 0; line-height: 1; letter-spacing: 1px; }
+
+        .main-container { 
+            display: grid; grid-template-columns: 1fr 420px; gap: 30px; 
+            max-width: 1400px; margin: auto; padding: 0 20px 40px;
+        }
+        @media (max-width: 1100px) { .main-container { grid-template-columns: 1fr; } }
+
+        /* --- TABELA --- */
+        .panel { background: var(--card); border-radius: 35px; padding: 25px; border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
+        td { 
+            padding: 20px; background: rgba(255,255,255,0.02); border-top: 1px solid var(--border);
+            font-family: var(--font-data); font-size: 0.85rem;
+        }
+        td:first-child { border-radius: 20px 0 0 20px; border-left: 1px solid var(--border); }
+        td:last-child { border-radius: 0 20px 20px 0; border-right: 1px solid var(--border); }
+        .val-num { font-family: var(--font-nums); font-size: 1.8rem; color: var(--accent); }
+        .row-paid { opacity: 0.2; filter: grayscale(1); }
+
+        /* --- FORMULÁRIO --- */
+        input, select { 
+            width: 100%; padding: 18px; background: rgba(0,0,0,0.3); border: 1px solid var(--border); 
+            border-radius: 18px; color: white; margin-bottom: 12px; outline: none; font-size: 1rem;
+        }
+        .btn-confirm { 
+            background: var(--accent); color: #000; border: none; padding: 22px; border-radius: 20px;
+            font-weight: 800; cursor: pointer; width: 100%; text-transform: uppercase; margin-top: 10px;
+        }
+        .btn-circle { width: 45px; height: 45px; border-radius: 14px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+    </style>
+</head>
+<body>
+
+    <div id="login-screen">
+        <div class="login-card">
+            <i data-lucide="shield-check" style="color:var(--accent); margin-bottom:15px; width:40px; height:40px"></i>
+            <h1>Gestão Financeira Pai</h1>
+            <input type="password" id="pass" class="login-input" placeholder="0000">
+            <button class="btn-confirm" onclick="auth()">Acessar Sistema</button>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <header>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px">
+                <h2 style="font-family:var(--font-nums); font-size:2.2rem; margin:0; letter-spacing:2px">CONTROLE FINANÇAS</h2>
+                <div style="background:rgba(56,189,248,0.1); color:var(--accent); padding:6px 15px; border-radius:12px; font-size:0.6rem; font-weight:800; border:1px solid var(--border)">CONECTADO</div>
+            </div>
+
+            <div class="timeline-container">
+                <button class="nav-btn" onclick="scrollT(-200)"><i data-lucide="chevron-left"></i></button>
+                <div class="timeline" id="timeline"></div>
+                <button class="nav-btn" onclick="scrollT(200)"><i data-lucide="chevron-right"></i></button>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Renda Disponível (R$)</h3>
+                <input type="number" id="in-renda" class="number" style="background:transparent; border:none; color:var(--accent); width:100%; outline:none" onchange="saveRenda()">
+                <div style="color:var(--success); font-size:0.6rem; margin-top:10px; font-family:var(--font-data)">● SALVO AUTOMATICAMENTE</div>
+            </div>
+            <div class="stat-card" style="border-bottom: 4px solid var(--success)">
+                <h3>Total Pago</h3>
+                <p class="number" style="color:var(--success)" id="txt-pago">0,00</p>
+            </div>
+            <div class="stat-card" id="box-sobra">
+                <h3>Saldo Livre</h3>
+                <p class="number" id="txt-sobra">0,00</p>
+            </div>
+        </div>
+
+        <div class="main-container">
+            <div class="panel">
+                <h3 style="margin:0 0 20px 0; font-size:0.9rem; letter-spacing:2px">LISTA_DE_DESPESAS</h3>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <tbody id="lista"></tbody>
+                    </table>
+                </div>
+                <button onclick="exportar()" style="background:transparent; border:1px solid var(--dim); color:var(--dim); padding:10px 20px; border-radius:15px; margin-top:20px; cursor:pointer; font-size:0.7rem">EXPORTAR CSV</button>
+            </div>
+
+            <div class="panel">
+                <h3 style="margin:0 0 25px 0; font-size:0.9rem; letter-spacing:2px">NOVO_LANCAMENTO</h3>
+                <input type="text" id="f-desc" placeholder="DESCRIÇÃO DA CONTA">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
+                    <input type="number" id="f-val" placeholder="VALOR R$">
+                    <input type="date" id="f-date">
+                </div>
+                <select id="f-cat">
+                    <option value="Fixos">🏠 CONTAS FIXAS</option>
+                    <option value="Cartões">💳 CARTÕES</option>
+                    <option value="Outros">🛍️ VARIÁVEIS</option>
+                </select>
+                <button class="btn-confirm" onclick="addItem()">Registrar No Mês</button>
+                
+                <div style="height:250px; margin-top:40px">
+                    <canvas id="chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let db = JSON.parse(localStorage.getItem('fin_v11_db')) || { itens: [], rendas: {}, mes: '' };
+    let myChart = null;
+    const nomesMeses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+    function auth() {
+        if(document.getElementById('pass').value === '272930') {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+            initApp();
+        }
+    }
+
+    function initApp() {
+        const cont = document.getElementById('timeline');
+        const mesAtualIdx = new Date().getMonth();
+        if(!db.mes) db.mes = `2026-${String(mesAtualIdx + 1).padStart(2,'0')}`;
+
+        nomesMeses.forEach((n, i) => {
+            let c = `2026-${String(i+1).padStart(2,'0')}`;
+            let pill = document.createElement('div');
+            pill.className = `month-pill ${db.mes === c ? 'active' : ''}`;
+            pill.id = `pill-${c}`;
+            pill.innerText = n;
+            pill.onclick = () => {
+                db.mes = c;
+                document.querySelectorAll('.month-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                render();
+                pill.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+            };
+            cont.appendChild(pill);
+        });
+
+        setTimeout(() => {
+            const active = document.getElementById(`pill-${db.mes}`);
+            if(active) active.scrollIntoView({ behavior: 'auto', inline: 'center' });
+        }, 100);
+
+        lucide.createIcons();
+        render();
+    }
+
+    function scrollT(v) { document.getElementById('timeline').scrollBy({ left: v, behavior: 'smooth' }); }
+
+    function saveRenda() {
+        db.rendas[db.mes] = parseFloat(document.getElementById('in-renda').value) || 0;
+        persist(); render();
+    }
+
+    function addItem() {
+        const d = document.getElementById('f-desc').value, v = parseFloat(document.getElementById('f-val').value);
+        if(d && v) {
+            db.itens.push({ id: Date.now(), d, v, dt: document.getElementById('f-date').value, c: document.getElementById('f-cat').value, m: db.mes, pago: false });
+            persist(); render();
+            document.getElementById('f-desc').value = ''; document.getElementById('f-val').value = '';
+        }
+    }
+
+    function toggle(id) {
+        let i = db.itens.find(x => x.id === id);
+        i.pago = !i.pago;
+        persist(); render();
+    }
+
+    function del(id) {
+        db.itens = db.itens.filter(x => x.id !== id);
+        persist(); render();
+    }
+
+    function persist() { localStorage.setItem('fin_v11_db', JSON.stringify(db)); }
+
+    function render() {
+        const corpo = document.getElementById('lista'), m = db.mes;
+        const renda = db.rendas[m] || 0;
+        document.getElementById('in-renda').value = renda;
+        corpo.innerHTML = '';
+        let tPago = 0, tTotal = 0, cats = { Fixos: 0, Cartões: 0, Outros: 0 };
+
+        db.itens.filter(i => i.m === m).forEach(i => {
+            tTotal += i.v;
+            if(i.pago) tPago += i.v;
+            cats[i.c] += i.v;
+            corpo.innerHTML += `
+                <tr class="${i.pago ? 'row-paid' : ''}">
+                    <td width="60"><button class="btn-circle" style="background:${i.pago?'var(--success)':'#1e293b'}; color:#000" onclick="toggle(${i.id})"><i data-lucide="check" size="18"></i></button></td>
+                    <td><div style="font-weight:700; color:var(--text); font-size:0.75rem">${i.d.toUpperCase()}</div><div style="font-size:0.6rem; color:var(--accent)">${i.c}</div></td>
+                    <td class="val-num">R$ ${i.v.toFixed(2)}</td>
+                    <td width="50"><button class="btn-circle" style="background:rgba(248,81,73,0.1); color:var(--danger)" onclick="del(${i.id})"><i data-lucide="trash-2" size="18"></i></button></td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('txt-pago').innerText = tPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        const sobra = renda - tTotal;
+        document.getElementById('txt-sobra').innerText = sobra.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+        document.getElementById('txt-sobra').style.color = sobra < 0 ? 'var(--danger)' : 'var(--text)';
+        document.getElementById('box-sobra').style.borderBottom = `4px solid ${sobra < 0 ? 'var(--danger)' : 'var(--accent)'}`;
+        
+        upChart(cats);
+        lucide.createIcons();
+    }
+
+    function upChart(d) {
+        const ctx = document.getElementById('chart').getContext('2d');
+        if(myChart) myChart.destroy();
+        myChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(d),
+                datasets: [{ data: Object.values(d), backgroundColor: ['#58a6ff', '#bc8cff', '#30363d'], borderWidth: 0 }]
+            },
+            options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#8b949e', font: { family: 'JetBrains Mono', size: 10 } } } } }
+        });
+    }
+
+    function exportar() {
+        let csv = "Status;Item;Valor;Mes\n";
+        db.itens.filter(i => i.m === db.mes).forEach(i => csv += `${i.pago?'Pago':'Pendente'};${i.d};${i.v};${i.m}\n`);
+        const b = new Blob(["\ufeff" + csv], { type: 'text/csv' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `Financeiro_${db.mes}.csv`; a.click();
+    }
+</script>
+</body>
+</html>
